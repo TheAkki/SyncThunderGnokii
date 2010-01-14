@@ -1,0 +1,9 @@
+# https://developer.mozilla.org/de/Erweiterung_erstellen
+# Chrome-Ordner zuordnen
+content GnokiiReader chrome/content/
+
+#overlay ?!
+overlay chrome://browser/content/browser.xul chrome://GnokiiReader/content/overlay/GnokiiReaderOverlay.xul
+
+#Sprachen
+locale GnokiiReader de-DE chrome/locale/de-DE

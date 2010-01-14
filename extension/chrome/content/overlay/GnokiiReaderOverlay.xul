@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE overlay SYSTEM "chrome://GnokiiReader/locale/de-DE/Sprachen.dtd" >
+<overlay id="GnokiiReaderOverlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+<script type="application/x-javascript"
+        src="chrome://GnokiiReader/content/overlay/GnokiiReaderOverlay.js" />
+
+<menupopup id="menu_ToolsPopup">
+	<menuitem insertafter="devToolsSeparator" label="&GnokiiReader.menu;"
+	  oncommand="startGnokiiReader();" />	
+</menupopup>
+
+
+</overlay>
