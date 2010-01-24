@@ -1,2 +1,3 @@
 <!-- main app menu stuff -->
-<!ENTITY     GnokiiReader.menu                "GnokiiReader">
+<!ENTITY	GnokiiReader.menu                	"GnokiiReader">
+<!ENTITY	GnokiiReader.MainWindow.Title		"GnokiiReader - Hauptfenster">

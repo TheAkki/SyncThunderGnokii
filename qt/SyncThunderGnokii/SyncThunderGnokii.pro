@@ -9,7 +9,9 @@ QT += network \
 QT -= gui
 
 INCLUDEPATH += ./header \
-    ~/versionsverwaltung/git/gnokii/include
+    /usr/include/
+
+LIBS += -L/usr/lib/ -lgnokii
 
 TARGET = SyncThunderGnokii
 

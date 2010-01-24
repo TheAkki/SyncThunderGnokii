@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE window SYSTEM "chrome://GnokiiReader/locale/de-DE/Sprachen.dtd">
-<script type="application/x-javascript"
+<!DOCTYPE window SYSTEM "chrome://GnokiiReader/locale/de-DE/Sprachen.dtd" >
+<window	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        title="&GnokiiReader.MainWindow.Title;"
+        id="winGnokiiReaderMain"
+	onload="setTimeout('onLoad()', 10)"
+        onunload="onUnload()">
+  <script type="application/x-javascript"
         src="chrome://GnokiiReader/content/MainWindow/GnokiiReaderMain.js" />
-
-<window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <hbox>
     <label control="{buddy control id}" value="GnokiiFile:"/>
     <textbox id="tbFile" value="~/GnokiiFile"/>
-    <button id="btBrowseFile" label="..."/>
+    <button id="btBrowseFile" label="..." onclick="doBrowse();"/>
     <button id="btStart" label="Start" onclick="Start();"/>
   </hbox>
 </window>

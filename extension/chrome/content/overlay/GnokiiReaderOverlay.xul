@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE overlay SYSTEM "chrome://GnokiiReader/locale/de-DE/Sprachen.dtd" >
 <overlay id="GnokiiReaderOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
