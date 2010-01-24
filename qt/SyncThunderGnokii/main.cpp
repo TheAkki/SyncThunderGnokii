@@ -23,7 +23,7 @@ void Doing()
 
     myGnokii->eDoInit(myConfigFile, myConfigEntry);
 
-    rHANDY_INFO rHandyInfo;
+    xGnokiiApi::rHANDY_INFO rHandyInfo;
 
     myGnokii->eDoReadHandyInfo( rHandyInfo );
     myGnokii->vPrintHandyInfo( rHandyInfo );
@@ -33,6 +33,16 @@ void Doing()
     myGnokii->eGetSupportedConnections(myConnections);
     myGnokii->vPrintSupportedConnections(myConnections);
     */
+
+    xGnokiiApi::rMEMORY_USAGE mySimUsage;
+    xGnokiiApi::rMEMORY_USAGE myInternalUsage;
+    xGnokiiApi::vecMemUsage myUsageVec;
+    //myGnokii->eDoReadMemoryUsage(xGnokiiApi::MT_SIM,mySimUsage);
+    //myGnokii->eDoReadMemoryUsage(xGnokiiApi::MT_InternalMemory, myInternalUsage);
+    //myUsageVec.push_back(mySimUsage);
+    //myUsageVec.push_back(myInternalUsage);
+    myGnokii->eDoReadMemoryUsage(myUsageVec);
+    myGnokii->vPrintMemoryUsage(myUsageVec);
 
     delete myGnokii;
 }

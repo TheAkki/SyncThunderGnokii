@@ -5,11 +5,14 @@
 namespace STG_ERRORCODE
 {
     typedef qint32  tErrorcode; // OK >= 0, NOK < 0
-    const tErrorcode S_OK             =   0;
-    const tErrorcode E_NOK            = - 1;
-    const tErrorcode E_NOT_INIT       = - 2;
-    const tErrorcode E_NO_MEMORY      = - 3;
-    const tErrorcode E_INVALID_STATE  = - 4;
+    const tErrorcode S_OK               =   0;
+    const tErrorcode E_NOK              = - 1;
+    const tErrorcode E_NOT_INIT         = - 2;
+    const tErrorcode E_NO_MEMORY        = - 3;
+    const tErrorcode E_INVALID_STATE    = - 4;
+    const tErrorcode E_INVALID_ARG      = - 5;
+    const tErrorcode E_NOT_IMPLEMENTET  = - 6;
+    const tErrorcode E_CANNOT_EXECUTE   = - 7;
 }
 
 #define TRUE    true

@@ -243,6 +243,117 @@ quint32 xGnokiiApi::ui32GetUsedGnokiiApi()
 
 
 /**
+  @brief    Internal function to convert the libgnokii memory_type enum to
+            eMEMORY_TYPE.
+  @param[in]    eMemory memory_type enum from libgnokii
+  @return   Mapped value with type of xGnokiiApi::eMEMORY_TYPE
+*/
+xGnokiiApi::eMEMORY_TYPE xGnokiiApi::eConvMemFromApi(gn_memory_type eMemory)
+{
+    switch(eMemory)
+    {
+        case GN_MT_ME:
+            return MT_InternalMemory;
+
+        case GN_MT_SM:
+            return MT_SIM;
+
+        default:
+            return MT_Invalid;
+    }
+}
+
+
+/**
+  @brief    Internal function to convert the enum eMEMORY_TYPE to enum from
+            libgnokii.
+  @param eMemory Type of Memory
+  @return Mapped value with type of libgnokii memory_type
+*/
+gn_memory_type xGnokiiApi::eConvMemToApi(eMEMORY_TYPE eMemory)
+{
+    switch(eMemory)
+    {
+        case MT_InternalMemory:
+            return GN_MT_ME;
+
+        case MT_SIM:
+            return GN_MT_SM;
+
+        default:
+            return GN_MT_XX;
+    }
+}
+
+
+/**
+  @brief Function to read memory usage of one memory type
+  @param[in] eMemory Type of Memory which want to read
+  @param[out] Structure to write data in
+  @return OK: STG_ERRORCODE::S_OK, NOK: STG_ERRORCODE::E_CANNOT_EXECUTE
+*/
+STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadMemoryUsage(
+    eMEMORY_TYPE eMemory,
+    rMEMORY_USAGE& Data
+)
+{
+    if( MA_STS_FAILED(c_Status ) )
+    {
+        return c_Status;
+    }
+
+    Data.eMemory = eMemory;
+    gn_error result = gn_lib_addressbook_memstat(
+            c_pApiState,
+            eConvMemToApi(eMemory),
+            &Data.i32Used,
+            &Data.i32Free
+    );
+
+    // check if ok
+    if( result != GN_ERR_NONE)
+    {
+        Data.i32Free = -1;
+        Data.i32Used = -1;
+        std::cerr   << "xGnokiiApi::eDoReadMemoryUsage: Can't read ("
+                    << result << ") " << gn_error_print(result) << "\n";
+        return STG_ERRORCODE::E_CANNOT_EXECUTE;
+    }
+
+    return c_Status;
+}
+
+
+/**
+  @brief This function read the memory usage of all available types of memory
+  @param[out] MemUsage Vector with usage informations
+  @return OK: STG_ERRORCODE::S_OK, NOK: STG_ERRORCODE::E_CANNOT_EXECUTE
+  */
+STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadMemoryUsage(vecMemUsage& MemUsage)
+{
+    MemUsage.clear();
+    STG_ERRORCODE::tErrorcode result = STG_ERRORCODE::E_NOK;
+    for(quint16 ui16__Loop = MT_InternalMemory;
+        ui16__Loop < MT_Invalid;
+        ui16__Loop++)
+    {
+        rMEMORY_USAGE r__Temp;
+        result = eDoReadMemoryUsage(static_cast<eMEMORY_TYPE>(ui16__Loop),
+                                    r__Temp);
+        if( MA_STS_SUCCESS(result) )
+        {
+            MemUsage.push_back( r__Temp );
+        }
+        else
+        {
+            return result;
+        }
+    }
+    return STG_ERRORCODE::S_OK;
+}
+
+
+/**
   @brief This function print the actual gnokii state as String
   @param[in] statemachine Pointer to Gnokii Statemachine
 */
@@ -322,7 +433,7 @@ void xGnokiiApi::vPrintUsedGnokiiApi(quint32 uiVersionGnokiiApi)
 */
 void xGnokiiApi::vPrintHandyInfo(const rHANDY_INFO& rHInfo)
 {
-    std::cout   << "Handy Infos\n "
+    std::cout   << "Handy Infos\n"
                 << "===========\n"
                 << "Manufacturer:" << "\t" <<
                     rHInfo.strManufacturer.toStdString() << "\n"
@@ -333,4 +444,36 @@ void xGnokiiApi::vPrintHandyInfo(const rHANDY_INFO& rHInfo)
                     "\n"
                 << "IMEI:" << "\t\t" << rHInfo.strIMEI.toStdString() << "\n"
                 << "\n";
+}
+
+
+/**
+  @brief This function print a vector with informations about memory usage
+*/
+void xGnokiiApi::vPrintMemoryUsage(vecMemUsage& MemUsage) const
+{
+    std::cout   << "Memory Usage\n"
+                << "============\n";
+    for(vecMemUsage::iterator itLoop = MemUsage.begin();
+        itLoop != MemUsage.end();
+        itLoop++)
+    {
+        if((itLoop->i32Used == -1) || (itLoop->i32Free == -1) )
+        {
+            // Error Case
+            std::cout   << strMemoryType(itLoop->eMemory).toStdString()
+                        << ":\t" << "Invalid" << "\n";
+        }
+        else
+        {
+            qreal d__Ratio = 0.0;
+            qint32 i32__sum = itLoop->i32Used + itLoop->i32Free;
+            d__Ratio = (qreal)itLoop->i32Used / (qreal)(i32__sum) * 100.0;
+
+            std::cout   << strMemoryType( itLoop->eMemory ).toStdString()
+                        << ":\t" << itLoop->i32Used << " of "
+                        << i32__sum << " = " << d__Ratio << "%\n";
+        }
+    }
+    std::cout << "\n";
 }
