@@ -44,6 +44,16 @@ void Doing()
     myGnokii->eDoReadMemoryUsage(myUsageVec);
     myGnokii->vPrintMemoryUsage(myUsageVec);
 
+    /*
+    xGnokiiApi::rPHONEBOOK_ENTRY myPhoneBookEntry;
+    memset(&myPhoneBookEntry, 0, sizeof(myPhoneBookEntry));
+    myGnokii->eDoReadPhonebookEntry(xGnokiiApi::MT_InternalMemory,23, myPhoneBookEntry);
+    */
+
+    xGnokiiApi::vecPhoneBookEntry myPhoneBook;
+    myGnokii->eDoReadPhonebookEntry(xGnokiiApi::MT_InternalMemory, myPhoneBook);
+    myGnokii->vPrintPhoneBook( myPhoneBook );
+
     delete myGnokii;
 }
 

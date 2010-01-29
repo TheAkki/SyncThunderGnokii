@@ -119,7 +119,7 @@ STG_ERRORCODE::tErrorcode xGnokiiApi::eDoInit(
     result = gn_lib_phone_open( c_pApiState );
     if( result != GN_ERR_NONE )
     {
-        std::cout << "Open phone failed with errorcode: " << result << "("
+        std::cerr << "Open phone failed with errorcode: " << result << "("
                   << gn_error_print( result ) << ")\n";
         return c_Status;
     }
@@ -241,51 +241,6 @@ quint32 xGnokiiApi::ui32GetUsedGnokiiApi()
     return (quint32)ui__GnokiiVersion;
 }
 
-
-/**
-  @brief    Internal function to convert the libgnokii memory_type enum to
-            eMEMORY_TYPE.
-  @param[in]    eMemory memory_type enum from libgnokii
-  @return   Mapped value with type of xGnokiiApi::eMEMORY_TYPE
-*/
-xGnokiiApi::eMEMORY_TYPE xGnokiiApi::eConvMemFromApi(gn_memory_type eMemory)
-{
-    switch(eMemory)
-    {
-        case GN_MT_ME:
-            return MT_InternalMemory;
-
-        case GN_MT_SM:
-            return MT_SIM;
-
-        default:
-            return MT_Invalid;
-    }
-}
-
-
-/**
-  @brief    Internal function to convert the enum eMEMORY_TYPE to enum from
-            libgnokii.
-  @param eMemory Type of Memory
-  @return Mapped value with type of libgnokii memory_type
-*/
-gn_memory_type xGnokiiApi::eConvMemToApi(eMEMORY_TYPE eMemory)
-{
-    switch(eMemory)
-    {
-        case MT_InternalMemory:
-            return GN_MT_ME;
-
-        case MT_SIM:
-            return GN_MT_SM;
-
-        default:
-            return GN_MT_XX;
-    }
-}
-
-
 /**
   @brief Function to read memory usage of one memory type
   @param[in] eMemory Type of Memory which want to read
@@ -305,7 +260,7 @@ STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadMemoryUsage(
     Data.eMemory = eMemory;
     gn_error result = gn_lib_addressbook_memstat(
             c_pApiState,
-            eConvMemToApi(eMemory),
+            (gn_memory_type) eMemory,
             &Data.i32Used,
             &Data.i32Free
     );
@@ -337,6 +292,8 @@ STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadMemoryUsage(vecMemUsage& MemUsage)
         ui16__Loop < MT_Invalid;
         ui16__Loop++)
     {
+        if( ui16__Loop == MT_IntMemorySim) continue;
+
         rMEMORY_USAGE r__Temp;
         result = eDoReadMemoryUsage(static_cast<eMEMORY_TYPE>(ui16__Loop),
                                     r__Temp);
@@ -350,6 +307,137 @@ STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadMemoryUsage(vecMemUsage& MemUsage)
         }
     }
     return STG_ERRORCODE::S_OK;
+}
+
+
+STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadPhonebookEntry
+(
+    eMEMORY_TYPE eMemory,
+    qint32 Slot,
+    rPHONEBOOK_ENTRY& Entry
+)
+{
+    STG_ERRORCODE::tErrorcode result = STG_ERRORCODE::E_NOK;
+
+    Entry.rHandy.eMemType   = eMemory;
+    Entry.rHandy.i32Slot    = Slot;
+
+    int i__IsEmpty = gn_lib_phonebook_entry_isempty(
+                c_pApiState,
+                (gn_memory_type) eMemory,
+                (int) Slot
+            );
+
+    if( i__IsEmpty == 0)
+    {
+        Entry.rHandy.bHasData = TRUE;
+        gn_error gn__result = GN_ERR_FAILED;
+        gn__result = gn_lib_phonebook_read_entry(
+                        c_pApiState,
+                        (gn_memory_type) eMemory,
+                        (int) Slot
+                    );
+
+        // check if i can load phonebook entry in internal gnokii struct
+        if( gn__result != GN_ERR_NONE )
+        {
+            std::cerr   << "xGnokiiApi::eDoReadPhonebookEntry(): Can't read "
+                        << "phonebook entry (" << gn__result << ") "
+                        << gn_error_print(gn__result) << "\n";
+            result = STG_ERRORCODE::E_CANNOT_EXECUTE;
+            return result;
+        }
+
+        gn_phonebook_entry* po_Entry = &(c_pApiState->u.pb_entry);
+
+        // Get Name
+        Entry.strName = QString( po_Entry->name );
+        Entry.strMainNumber = QString( po_Entry->number );
+
+        vecPhoneBookSubE vecSubEntry;
+
+        // Read SubEntrys
+        for(quint16 ui16__Loop = 0;
+            ui16__Loop < po_Entry->subentries_count;
+            ui16__Loop++
+        )
+        {
+            rPHONEBOOK_SUBENTRY tempSubE;
+            tempSubE.eSubType = (xGnokiiApi::ePHONEBOOK_SUBENTRY_TYPE)
+                                po_Entry->subentries[ui16__Loop].entry_type;
+
+            // work depend on SubEntryType
+            switch( tempSubE.eSubType )
+            {
+                default:
+                    tempSubE.eNumType = (xGnokiiApi::ePHONEBOOK_NUMBER_TYPE)
+                        po_Entry->subentries[ui16__Loop].number_type;
+                    tempSubE.strValue =
+                        QString( po_Entry->subentries[ui16__Loop].data.number );
+
+            }
+
+            // Add Entry to Vector
+            vecSubEntry.push_back( tempSubE );
+        }
+
+        // add Vector to Struct
+        Entry.vSubEntrys = vecSubEntry;
+
+    }
+    result = STG_ERRORCODE::S_OK;
+
+    return result;
+}
+
+
+STG_ERRORCODE::tErrorcode xGnokiiApi::eDoReadPhonebookEntry(
+    eMEMORY_TYPE eMemory,
+    vecPhoneBookEntry& Entrys,
+    bool boClearVector
+)
+{
+    STG_ERRORCODE::tErrorcode result = STG_ERRORCODE::E_NOK;
+    rMEMORY_USAGE rMem;
+    eDoReadMemoryUsage(eMemory, rMem);
+
+    // clear Vector
+    if(boClearVector == TRUE)
+    {
+        Entrys.clear();
+    }
+
+    // read all Entrys
+    quint32 ui32_SumEntry = rMem.i32Used + rMem.i32Free;
+    for(quint32 ui32__Loop = 1; ui32__Loop <= ui32_SumEntry; ui32__Loop++)
+    {
+        // read if entry is empty
+        bool bo__IsEmpty = gn_lib_phonebook_entry_isempty(
+                                c_pApiState,
+                                (gn_memory_type)eMemory,
+                                ui32__Loop);
+
+        // skipp if empty
+        if( TRUE == bo__IsEmpty) { continue; }
+
+        rPHONEBOOK_ENTRY rTemp;
+        result = eDoReadPhonebookEntry(eMemory,ui32__Loop, rTemp);
+
+        // check if can be read
+        if( MA_STS_SUCCESS(result) )
+        {
+            Entrys.push_back( rTemp );
+        }
+        else
+        {
+            std::cerr   << "xGnokiiApi::eDoReadPhonebookEntry(): "
+                        << "Single Entry (" << ui32__Loop
+                        << ") can not read. ErrorCode: "
+                        << result << "\n";
+        }
+    }
+
+    return result;
 }
 
 
@@ -474,6 +562,100 @@ void xGnokiiApi::vPrintMemoryUsage(vecMemUsage& MemUsage) const
                         << ":\t" << itLoop->i32Used << " of "
                         << i32__sum << " = " << d__Ratio << "%\n";
         }
+    }
+    std::cout << "\n";
+}
+
+
+void xGnokiiApi::vPrintPhoneBook
+(
+    vecPhoneBookEntry& Entrys,
+    bool Verbose
+) const
+{
+    std::cout   << "PhoneBookEntrys:\n"
+                << "================\n";
+
+    for(vecPhoneBookEntry::iterator it_Loop = Entrys.begin();
+        it_Loop != Entrys.end();
+        it_Loop++)
+    {
+        rPHONEBOOK_ENTRY rTempEntry = *it_Loop;
+
+        // print name and default number
+        std::cout   << rTempEntry.strName.toStdString() << "\n";
+
+        // check if entry has only a main number
+        if(rTempEntry.vSubEntrys.size() == 0)
+        {
+            std::cout << rTempEntry.strMainNumber.toStdString() << "\n";
+        }
+        // is a big entry -> has sub entrys (with main number)
+        else
+        {
+            vecPhoneBookSubE::iterator it_Sub;
+            for(it_Sub = rTempEntry.vSubEntrys.begin();
+                it_Sub != rTempEntry.vSubEntrys.end();
+                it_Sub++)
+            {
+                rPHONEBOOK_SUBENTRY rSub = *it_Sub;
+                switch(rSub.eSubType)
+                {
+                    case EntTypeNote:
+                        std::cout << "Note: " << rSub.strValue.toStdString() << "\n";
+                        break;
+
+                    case EntTypeEmail:
+                        std::cout << "Email: " << rSub.strValue.toStdString() << "\n";
+                        break;
+
+                    case EntTypeUrl:
+                        std::cout << "URL: " << rSub.strValue.toStdString() << "\n";
+
+                    case EntTypeNumber:
+                        switch(rSub.eNumType)
+                        {
+                            case NumTypeCommon:
+                                std::cout << "Common: ";
+                                break;
+
+                            case NumTypeMobile:
+                                std::cout << "Mobile: ";
+                                break;
+
+                            case NumTypeHome:
+                                std::cout << "Home: ";
+                                break;
+
+                            case NumTypeFax:
+                                std::cout << "Fax: ";
+                                break;
+
+                            case NumTypeWork:
+                                std::cout << "Work: ";
+                                break;
+
+                            case NumTypeGeneral:
+                                std::cout << "General: ";
+                                break;
+
+                            case NumTypeNone:
+                                std::cout << "None Type: ";
+                                break;
+
+                            default:
+                                std::cout << "Unknown N-Type: ";
+                        }
+                        std::cout << rSub.strValue.toStdString() << "\n";
+                        break;
+
+                    default:
+                        std::cout << "Unknown Type:" << rSub.strValue.toStdString() << "\n";
+                }
+            }
+        }
+        std::cout << "\n";
+
     }
     std::cout << "\n";
 }
